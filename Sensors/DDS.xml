@@ -1,0 +1,341 @@
+<?xml version="1.0"?>
+<!--
+(c) 2005-2015 Copyright, Real-Time Innovations.  All rights reserved.
+No duplications, whole or partial, manual or electronic, may be made
+without express written permission.  Any such copies, or revisions thereof,
+must display this notice unaltered.
+This code contains trade secrets of Real-Time Innovations, Inc.
+ -->
+
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:noNamespaceSchemaLocation="http://community.rti.com/schema/5.1.0/rti_dds_profiles.xsd" version="5.1.0">
+
+    <!-- Qos Library -->
+	<qos_library name="QosLibrary">
+
+	</qos_library>
+
+    <!-- types -->
+    <types>
+    <struct name="TempMessage">
+      <member name="TempNumber" type="long"/>
+      <member name="TempID" stringMaxLength="128" type="string" key="true"/>
+    </struct>
+
+    <struct name="StringMessage"> <!-- both button and camera use this type -->
+      <member name="String" stringMaxLength="128" type="string" key="true"/>
+    </struct>
+
+    <struct name="ActuatorMessage">
+      <member name="ActuatorID" stringMaxLength="128" type="string" key="true"/>
+      <member name="ActuatorStatus" stringMaxLength="128" type="string"/>
+    </struct>
+
+    </types>
+
+
+    <!-- Domain Library -->
+	<!-- this is related to the domain 0 that we set on shape deme-->
+    <domain_library name="MyDomainLibrary">
+        <domain name="MyDomain" domain_id="0">
+
+            <register_type name="TempMessage"  type_ref="TempMessage" />
+            <topic name="Temp_Topic" register_type_ref="TempMessage"/>
+
+            <register_type name="StringMessage"  type_ref="StringMessage" />
+            <topic name="Camera_Topic" register_type_ref="StringMessage"/>
+            <topic name="Button_Topic" register_type_ref="StringMessage"/>
+
+            <register_type name="ActuatorMessage"  type_ref="ActuatorMessage" />
+            <topic name="Actuator_Topic" register_type_ref="ActuatorMessage"/>
+
+        </domain>
+    </domain_library>
+
+
+    <!-- Participant library -->
+    <domain_participant_library name="MyParticipantLibrary">
+
+        <domain_participant name="TempSensor" domain_ref="MyDomainLibrary::MyDomain">
+            <publisher name="TempPublisher">
+                <data_writer name="Temp1_writer" topic_ref="Temp_Topic">
+                    <datawriter_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+<!--                            <kind>VOLATILE_DURABILITY_QOS</kind>-->
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind> <!--offers the data even if the reader wasn't created yet-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+		                    <kind>KEEP_ALL_HISTORY_QOS</kind> <!--extreme values will be filtered by dashboard-->
+<!--                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                                <depth>10</depth> -->
+	                    </history>
+                    </datawriter_qos>
+                </data_writer>
+                <data_writer name="Temp2_writer" topic_ref="Temp_Topic">
+                     <datawriter_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+<!--                            <kind>VOLATILE_DURABILITY_QOS</kind>-->
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind> <!--offers the data even if the reader wasn't created yet-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+		                    <kind>KEEP_ALL_HISTORY_QOS</kind> <!--extreme values will be filtered by dashboard-->
+<!--                            <kind>KEEP_LAST_HISTORY_QOS</kind>-->
+<!--                               <depth>10</depth> -->
+	                    </history>
+                    </datawriter_qos>
+                </data_writer>
+            </publisher>
+        </domain_participant>
+
+        <domain_participant name="Camera" domain_ref="MyDomainLibrary::MyDomain">
+            <publisher name="CameraPublisher">
+                <data_writer name="Camera_writer" topic_ref="Camera_Topic">
+                    <datawriter_qos>
+                        <reliability>
+<!--                            <kind>RELIABLE_RELIABILITY_QOS</kind>-->
+                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind> <!--there is no need to ensure the arrival of the message-->
+                        </reliability>
+                        <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind>
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth> <!--no need for previous messages-->
+	                    </history>
+                    </datawriter_qos>
+                </data_writer>
+            </publisher>
+        </domain_participant>
+
+         <domain_participant name="Button" domain_ref="MyDomainLibrary::MyDomain">
+            <publisher name="ButtonPublisher">
+                <data_writer name="Button_writer" topic_ref="Button_Topic">
+                    <datawriter_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind> <!-- need to ensure arrival of message-->
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind> <!--actuator default initial state is "start"-->
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>
+	                    </history>
+                    </datawriter_qos>
+                </data_writer>
+            </publisher>
+        </domain_participant>
+
+        <domain_participant name="Actuator" domain_ref="MyDomainLibrary::MyDomain">
+            <subscriber name="ActuatorSubscriber">
+                <data_reader name="Actuator1_button_reader" topic_ref="Button_Topic" >
+                    <datareader_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind> <!--actuator default initial state is "start" and not "stopped", doesnt need previous data-->
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+                <data_reader name="Actuator1_temp_reader" topic_ref="Temp_Topic" >
+                    <datareader_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                       <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind> <!--actuator default initial state is "start" and not "degraded", doesnt need previous data-->
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth> <!--stores 1 fast temp measures and 1 slow-->
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+                <data_reader name="Actuator2_button_reader" topic_ref="Button_Topic" >
+                    <datareader_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind> <!--actuator default initial state is "start" and not "stopped", doesnt need previous data-->
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+                <data_reader name="Actuator2_temp_reader" topic_ref="Temp_Topic" >
+                     <datareader_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                       <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind> <!--actuator default initial state is "start" and not "degraded", doesnt need previous data-->
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>  <!--stores 1 fast temp measures and 1 slow-->
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+            </subscriber>
+            <publisher name="ActuatorPublisher">
+                <data_writer name="Actuator1_writer" topic_ref="Actuator_Topic">
+                    <datawriter_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+<!--                            <kind>VOLATILE_DURABILITY_QOS</kind>-->
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind> <!-- the dashboard needs previous info-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>10</depth>
+	                    </history>
+                    </datawriter_qos>
+                </data_writer>
+                <data_writer name="Actuator2_writer" topic_ref="Actuator_Topic">
+                    <datawriter_qos>
+                        <reliability>
+                            <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                            <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+<!--                            <kind>VOLATILE_DURABILITY_QOS</kind>-->
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind> <!-- the dashboard needs previous info-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>10</depth>
+	                    </history>
+                    </datawriter_qos>
+                </data_writer>
+            </publisher>
+        </domain_participant>
+
+        <domain_participant name="Dashboard" domain_ref="MyDomainLibrary::MyDomain">
+            <subscriber name="DashboardSubscriber">
+                <data_reader name="Dashboard_camera_reader" topic_ref="Camera_Topic">
+                    <datareader_qos>
+                        <reliability>
+<!--                             <kind>RELIABLE_RELIABILITY_QOS</kind>-->
+                           <kind>BEST_EFFORT_RELIABILITY_QOS</kind> <!-- there is no need to ensure arrival of message-->
+                        </reliability>
+                        <durability>
+                            <kind>VOLATILE_DURABILITY_QOS</kind>
+<!--                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+<!--		                    <kind>KEEP_ALL_HISTORY_QOS</kind>-->
+                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+                <data_reader name="Dashboard_temp_reader" topic_ref="Temp_Topic">
+                    <datareader_qos>
+                        <reliability>
+                             <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                           <kind>BEST_EFFORT_RELIABILITY_QOS</kind>-->
+                        </reliability>
+                        <durability>
+<!--                            <kind>VOLATILE_DURABILITY_QOS</kind> -->
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind> <!--even if the dashboard wasn't initialiez yet-->
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+		                    <kind>KEEP_ALL_HISTORY_QOS</kind> <!-- saves all history to get 10 data from each temp sensor-->
+<!--                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>-->
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+                <data_reader name="Dashboard_actuator_reader" topic_ref="Actuator_Topic">
+                    <datareader_qos>
+                        <reliability>
+                             <kind>RELIABLE_RELIABILITY_QOS</kind>
+<!--                           <kind>BEST_EFFORT_RELIABILITY_QOS</kind> -->
+                        </reliability>
+                        <durability>
+<!--                            <kind>VOLATILE_DURABILITY_QOS</kind> -->
+                            <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+<!--                            <kind>TRANSIENT_DURABILITY_QOS</kind>-->
+                        </durability>
+                        <history>
+		                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+<!--                            <kind>KEEP_LAST_HISTORY_QOS</kind>
+                            <depth>1</depth>-->
+	                    </history>
+                    </datareader_qos>
+<!--                <filter name="ExampleFilter" kind="builtin.sql">-->
+<!--                    <expression> Example > 2 </expression>-->
+<!--                </filter>-->
+                </data_reader>
+            </subscriber>
+        </domain_participant>
+    </domain_participant_library>
+</dds>
